@@ -1,0 +1,16 @@
+- name: Check Kafka status via ZooKeeper CLI
+  hosts: zookeeper
+  become: yes
+  tasks:
+    - name: Execute ZooKeeper CLI command
+      shell: |
+        cd /opt/zookeeper/apache-zookeeper-3.6.2-bin/bin
+        ./zkCli.sh <<EOF
+        ls /brokers/ids
+        quit
+        EOF
+      register: kafka_status
+
+    - name: Print Kafka status
+      debug:
+        msg: "Kafka brokers: {{ kafka_status.stdout }}"
