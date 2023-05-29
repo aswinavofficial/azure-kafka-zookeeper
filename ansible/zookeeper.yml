@@ -1,0 +1,61 @@
+---
+- name: Install and configure zookeeper
+  hosts: zookeeper
+  become: yes
+  vars:
+    zookeeper_home: "/opt/zookeeper"
+    zookeeper_data_dir: "/var/lib/zookeeper"
+
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install required dependencies
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - "openjdk-11-jdk"
+        - "curl"
+        - "wget"
+
+    - name: Create zookeeper directory
+      file:
+        path: "/opt/zookeeper"
+        state: directory
+
+    - name: Download and extract Zookeeper
+      unarchive:
+        src: "https://archive.apache.org/dist/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz"
+        dest: "{{ zookeeper_home }}"
+        remote_src: yes
+        creates: "{{ zookeeper_home }}/apache-zookeeper-3.6.2-bin"
+
+    - name: Configure Zookeeper
+      template:
+        src: templates/zoo.cfg.j2
+        dest: "{{ zookeeper_home }}/apache-zookeeper-3.6.2-bin/conf/zoo.cfg"
+
+    - name: Create dataDir for Zookeeper
+      file:
+        path: "{{ zookeeper_data_dir }}"
+        state: directory
+
+    - name: Set Zookeeper ID
+      copy:
+        content: "{{ hostvars[inventory_hostname]['zookeeper_id'] }}"
+        dest: "{{ zookeeper_data_dir }}/myid"
+
+    - name: Start Zookeeper
+      command: "{{ zookeeper_home }}/apache-zookeeper-3.6.2-bin/bin/zkServer.sh restart"
+
+    - name: Check if Zookeeper is running
+      command: "{{ zookeeper_home }}/apache-zookeeper-3.6.2-bin/bin/zkServer.sh status"
+      register: zookeeper_status
+      ignore_errors: true
+
+    - name: Display Zookeeper status
+      debug:
+        msg: "{{ zookeeper_status.stdout }}"

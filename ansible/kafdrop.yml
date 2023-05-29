@@ -1,0 +1,37 @@
+- name: Install and configure Kafdrop
+  hosts: zookeeper
+  become: yes
+  vars:
+    zookeeper_host: "{{ inventory_hostname }}"
+    kafdrop_version: "3.27.0"
+    
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Install Docker Python library
+      pip:
+        name: docker-py
+        state: present
+
+    - name: Pull Kafdrop Docker image
+      docker_image:
+        name: obsidiandynamics/kafdrop
+        source: pull
+        tag: "{{ kafdrop_version }}"
+
+    - name: Run Kafdrop container
+      docker_container:
+        name: kafdrop
+        image: obsidiandynamics/kafdrop:{{ kafdrop_version }}
+        state: started
+        published_ports: "9000:9000"
+        env:
+          KAFKA_BROKERCONNECT: "{{ groups['kafka_brokers'] | join(',') }}:9092"
+          JVM_OPTS: "-Xms32M -Xmx64M"

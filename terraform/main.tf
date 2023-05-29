@@ -23,32 +23,6 @@ resource "azurerm_subnet" "kafka-zookeeper-subnet" {
   address_prefixes     = ["10.0.2.0/24"]
 }
 
-resource "azurerm_subnet" "bastionsubnet" {
-  name                 = "AzureBastionSubnet"  
-  resource_group_name  = azurerm_resource_group.kafka-zookeeper-rg.name
-  virtual_network_name = azurerm_virtual_network.kafka-zookeeper-virtual-network.name
-  address_prefixes     = ["10.0.1.0/24"]
-}
-
-resource "azurerm_public_ip" "bastion" {
-  name                = "bastion-public-ip"
-  location            = azurerm_resource_group.kafka-zookeeper-rg.location
-  resource_group_name = azurerm_resource_group.kafka-zookeeper-rg.name
-  allocation_method   = "Static"
-  sku                 = "Standard"
-}
-
-resource "azurerm_bastion_host" "bastion-host" {
-  name                = "bastion-host"
-  location            = azurerm_resource_group.kafka-zookeeper-rg.location
-  resource_group_name = azurerm_resource_group.kafka-zookeeper-rg.name
-
-  ip_configuration {
-    name                 = "configuration"
-    subnet_id            = azurerm_subnet.bastionsubnet.id
-    public_ip_address_id = azurerm_public_ip.bastion.id
-  }
-}
 
 resource "azurerm_network_security_group" "kafka-zookeeper-sg" {
   name                = "ssh_nsg"
@@ -126,6 +100,14 @@ output "kafka_ips" {
 }
 
 
+resource "azurerm_public_ip" "zookeeper1_public_ip" {
+  name                = "zookeeper1PublicIP"
+  location            = azurerm_resource_group.kafka-zookeeper-rg.location
+  resource_group_name = azurerm_resource_group.kafka-zookeeper-rg.name
+  allocation_method   = "Dynamic"
+}
+
+
 resource "azurerm_network_interface" "zookeeper-nic" {
   name                = "zookeeper-nic"
   location            = azurerm_resource_group.kafka-zookeeper-rg.location
@@ -135,6 +117,7 @@ resource "azurerm_network_interface" "zookeeper-nic" {
     name                          = "zookeeper-ip-config"
     subnet_id                     = azurerm_subnet.kafka-zookeeper-subnet.id
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.zookeeper1_public_ip.id
   }
 }
 
@@ -180,8 +163,9 @@ output "zookeeper_ip" {
 }
 
 
-output "bastion-public-ip" {
-  value = azurerm_public_ip.bastion.ip_address
+output "zookeeper1_public_ip" {
+  description = "The public IP of the Zookeeper VM"
+  value       = azurerm_public_ip.zookeeper1_public_ip.ip_address
 }
 
 
