@@ -55,18 +55,34 @@
         owner: kafkauser
         recurse: yes
 
-    - name: Set KAFKA_HEAP_OPTS environment variable
-      shell: "export KAFKA_HEAP_OPTS='-Xmx512m -Xms512m'"
-      environment:
-        KAFKA_HEAP_OPTS: "-Xmx512m -Xms512m"
-        
-    - name: Start Kafka
-      command: "{{ kafka_home }}/kafka_{{ scala_kafka_version }}/bin/kafka-server-start.sh -daemon {{ kafka_home }}/kafka_{{ scala_kafka_version }}/config/server.properties"
+    - name: Create Kafka service file
+      template:
+        src: kafka.service.j2
+        dest: /etc/systemd/system/kafka.service
+      become: yes
 
-    - name: Check if Kafka is running
-      shell: ps -ef | grep kafka | grep -v grep
-      register: kafka_process
+    - name: Reload systemctl daemon to read new service
+      command: systemctl daemon-reload
+      become: yes
+    
+    - name: Unmask Kafka service
+      command: systemctl unmask kafka
+      become: yes
 
-    - name: Print Kafka status
+    - name: Enable Kafka service to start on boot
+      systemd:
+        name: kafka
+        enabled: yes
+        state: started
+      become: yes
+    
+    - name: Get Kafka service status
+      command: systemctl status kafka
+      register: kafka_status
+      ignore_errors: true
+      become: yes
+
+    - name: Print Kafka service status
       debug:
-        msg: "Kafka is {{ 'running' if kafka_process.stdout else 'not running' }}"
+        var: kafka_status.stdout_lines
+
