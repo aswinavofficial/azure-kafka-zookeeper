@@ -1,37 +1,24 @@
+---
 - name: Install and configure Kafdrop
   hosts: zookeeper
   become: yes
   vars:
     zookeeper_host: "{{ inventory_hostname }}"
-    kafdrop_version: "3.27.0"
+    kafdrop_version: "3.31.0"
+    kafka_broker: "{{ groups['kafka_brokers'][0] }}" 
     
   tasks:
-    - name: Update apt cache
+    - name: Install required software
       apt:
-        update_cache: yes
-
-    - name: Install Docker
-      apt:
-        name: docker.io
+        name: ["openjdk-11-jdk", "curl", "unzip"]
         state: present
 
-    - name: Install Docker Python library
-      pip:
-        name: docker-py
-        state: present
+    - name: Download Kafdrop
+      get_url:
+        url: "https://github.com/obsidiandynamics/kafdrop/releases/download/{{ kafdrop_version }}/kafdrop-{{ kafdrop_version }}.jar"
+        dest: "/tmp/kafdrop-{{ kafdrop_version }}.jar"
 
-    - name: Pull Kafdrop Docker image
-      docker_image:
-        name: obsidiandynamics/kafdrop
-        source: pull
-        tag: "{{ kafdrop_version }}"
-
-    - name: Run Kafdrop container
-      docker_container:
-        name: kafdrop
-        image: obsidiandynamics/kafdrop:{{ kafdrop_version }}
-        state: started
-        published_ports: "9000:9000"
-        env:
-          KAFKA_BROKERCONNECT: "{{ groups['kafka_brokers'] | join(',') }}:9092"
-          JVM_OPTS: "-Xms32M -Xmx64M"
+    - name: Run Kafdrop
+      shell: nohup java -jar /tmp/kafdrop-{{ kafdrop_version }}.jar  --kafka.brokerConnect={{ kafka_broker }}:9092 --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --server.port=9000 & 
+      args:
+        executable: /bin/bash

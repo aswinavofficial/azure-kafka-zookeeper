@@ -1,0 +1,38 @@
+---
+- name: Kafka topic creation and sending test message
+  hosts: kafka_brokers[0]
+  become: yes
+  vars:
+    kafka_home: "/opt/kafka"
+    scala_kafka_version: "2.13-3.4.0"
+    topic_name: "test_topic{{ 1000 | random }}"
+    zookeeper_host: "{{ groups['zookeeper'][0] }}"
+    message: "Hello, World!"
+
+  tasks:
+    - name: Create a Kafka topic
+      shell: >
+        {{ kafka_home }}/kafka_{{ scala_kafka_version }}/bin/kafka-topics.sh --bootstrap-server {{ inventory_hostname }}:9092 --topic {{ topic_name }} --create --partitions 3 --replication-factor 3
+      become: yes
+      become_user: kafkauser
+
+    - name: Send a message to the topic
+      shell: >
+        echo "{{ message }}" | {{ kafka_home }}/kafka_{{ scala_kafka_version }}/bin/kafka-console-producer.sh --bootstrap-server {{ inventory_hostname }}:9092 --topic {{ topic_name }}
+      become: yes
+      become_user: kafkauser
+
+    - name: Wait for the message to propagate
+      pause:
+        seconds: 5
+
+    - name: Subscribe to the topic and print message
+      shell: >
+        {{ kafka_home }}/kafka_{{ scala_kafka_version }}/bin/kafka-console-consumer.sh --bootstrap-server {{ inventory_hostname }}:9092 --topic {{ topic_name }} --from-beginning --max-messages 1 --timeout-ms 5000
+      register: kafka_message
+      become: yes
+      become_user: kafkauser
+
+    - name: Display Kafka message
+      debug:
+        msg: "{{ kafka_message.stdout }}"
