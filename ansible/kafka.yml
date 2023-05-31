@@ -86,3 +86,15 @@
       debug:
         var: kafka_status.stdout_lines
 
+    - name: Check kafka broker list in zookeeper
+      command: "{{ kafka_home }}/kafka_{{ scala_kafka_version }}/bin/zookeeper-shell.sh {{ zookeeper_host }}:2181 ls /brokers/ids"
+      register: zookeeper_status
+      ignore_errors: true
+      become: yes
+      become_user: kafkauser
+
+    - name: Print kafka broker list 
+      debug:
+        var: zookeeper_status.stdout_lines
+
+
