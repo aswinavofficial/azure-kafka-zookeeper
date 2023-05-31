@@ -2,15 +2,11 @@
   hosts: zookeeper
   become: yes
   tasks:
-    - name: Execute ZooKeeper CLI command
-      shell: |
-        cd /opt/zookeeper/apache-zookeeper-3.6.2-bin/bin
-        ./zkCli.sh <<EOF
-        ls /brokers/ids
-        quit
-        EOF
-      register: kafka_status
+    - name: Check kafka broker list in zookeeper
+      command: "/opt/zookeeper/apache-zookeeper-3.6.2-bin/bin/zkCli.sh ls /brokers/ids"
+      register: zookeeper_status
+      ignore_errors: true
 
-    - name: Print Kafka status
+    - name: Print kafka broker list 
       debug:
-        msg: "Kafka brokers: {{ kafka_status.stdout }}"
+        var: zookeeper_status.stdout_lines
