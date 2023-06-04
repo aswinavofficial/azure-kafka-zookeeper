@@ -46,7 +46,6 @@
         src: templates/server.properties.j2
         dest: "{{ kafka_home }}/kafka_{{ scala_kafka_version }}/config/server.properties"
       vars:
-        #broker_id: "{{ play_hosts.index(inventory_hostname) }}"
         broker_id: "{{ hostvars[inventory_hostname]['kafka_broker_id'] }}"
 
     - name: Change ownership of Kafka directory
